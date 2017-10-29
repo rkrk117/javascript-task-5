@@ -24,11 +24,8 @@ function handleSubscriber(event, subscriber, emitter) {
         if (subscriber.happened === 0) {
             subscriber.handler.call(subscriber.student);
             subscriber.happened = subscriber.nth;
-
-            return;
         }
-    }
-    if (subscriber.happened !== 0) {
+    } else if (subscriber.happened !== 0) {
         subscriber.handler.call(subscriber.student);
         if (subscriber.happened === 1) {
             emitter.off(event, subscriber.student);
@@ -37,8 +34,9 @@ function handleSubscriber(event, subscriber, emitter) {
         }
 
         return;
+    } else {
+        subscriber.handler.call(subscriber.student);
     }
-    subscriber.handler.call(subscriber.student);
 }
 
 function add(emitter, event, subscriber) {
