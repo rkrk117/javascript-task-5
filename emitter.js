@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализованы методы several и through
  */
-getEmitter.isStar = false;
+getEmitter.isStar = true;
 module.exports = getEmitter;
 
 function eventPath(event) {
@@ -32,8 +32,6 @@ function handleSubscriber(event, subscriber, emitter) {
         } else {
             subscriber.happened--;
         }
-
-        return;
     } else {
         subscriber.handler.call(subscriber.student);
     }
@@ -92,9 +90,9 @@ function getEmitter() {
             var emitter = this;
             eventPath(event).forEach(function (subevent) {
                 if (typeof emitter.subscribes[subevent] !== 'undefined') {
-                    emitter.subscribes[subevent].forEach(function (subscriber) {
-                        handleSubscriber(subevent, subscriber, emitter);
-                    });
+                    emitter.subscribes[subevent].forEach(subscriber =>
+                        handleSubscriber(subevent, subscriber, emitter)
+                    );
                 }
             });
 
