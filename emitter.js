@@ -61,7 +61,9 @@ function getEmitter() {
          * @returns {Object}
          */
         on: function (event, context, handler) {
-            add(this, event, { student: context, handler, happened: 0, nth: 0 });
+            if (typeof handler === 'function') {
+                add(this, event, { student: context, handler, happened: 0, nth: 0 });
+            }
 
             return this;
         },
