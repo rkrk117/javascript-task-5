@@ -28,7 +28,7 @@ function handleSubscriber(event, subscriber, emitter) {
     } else if (subscriber.happened !== 0) {
         subscriber.handler.call(subscriber.student);
         if (subscriber.happened === 1) {
-            emitter.off(event, subscriber.student);
+            emitter.off(event, subscriber.student, true);
         } else {
             subscriber.happened--;
         }
@@ -42,6 +42,23 @@ function add(emitter, event, subscriber) {
         emitter.subscribes[event].push(subscriber);
     } else {
         emitter.subscribes[event] = [subscriber];
+    }
+}
+
+function remove(emitter, event, context) {
+    if (typeof emitter.subscribes[event] !== 'undefined') {
+        emitter.subscribes[event] =
+            emitter.subscribes[event].filter(subscribe => subscribe.student !== context);
+    }
+}
+
+function purge(emitter, event, context) {
+    let subclassesRegExp = new RegExp('^' + event + '\\.');
+    for (let events in emitter.subscribes) {
+        if (events.match(subclassesRegExp) || events === event) {
+            emitter.subscribes[events] =
+                emitter.subscribes[events].filter(subscribe => subscribe.student !== context);
+        }
     }
 }
 
@@ -61,9 +78,7 @@ function getEmitter() {
          * @returns {Object}
          */
         on: function (event, context, handler) {
-            if (typeof handler === 'function') {
-                add(this, event, { student: context, handler, happened: 0, nth: 0 });
-            }
+            add(this, event, { student: context, handler, happened: 0, nth: 0 });
 
             return this;
         },
@@ -72,12 +87,14 @@ function getEmitter() {
          * Отписаться от события
          * @param {String} event
          * @param {Object} context
+         * @param {Boolean} notall - если true, то подписка исчерпалась и подклассы удалены не будут
          * @returns {Object}
          */
-        off: function (event, context) {
-            if (typeof this.subscribes[event] !== 'undefined') {
-                this.subscribes[event] =
-                    this.subscribes[event].filter(subscribe => subscribe.student !== context);
+        off: function (event, context, notall) {
+            if (notall === true) {
+                remove(this, event, context);
+            } else {
+                purge(this, event, context);
             }
 
             return this;
