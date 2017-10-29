@@ -7,38 +7,100 @@
 getEmitter.isStar = true;
 module.exports = getEmitter;
 
+function eventPath(event) {
+    let result = event.split('.').reduce(function (acc, cur) {
+        acc.push((acc.length === 0 ? '' : acc[acc.length - 1] + '.') + cur);
+
+        return acc;
+    }, []);
+    result.reverse();
+
+    return result;
+}
+
+function handleSubscriber(event, subscriber, emitter) {
+    if (subscriber.nth !== 0) {
+        subscriber.happened--;
+        if (subscriber.happened === 0) {
+            subscriber.handler.call(subscriber.student);
+            subscriber.happened = subscriber.nth;
+
+            return;
+        }
+    }
+    if (subscriber.happened !== 0) {
+        subscriber.handler.call(subscriber.student);
+        if (subscriber.happened === 1) {
+            emitter.off(event, subscriber.student);
+        } else {
+            subscriber.happened--;
+        }
+
+        return;
+    }
+    subscriber.handler.call(subscriber.student);
+}
+
+function add(emitter, event, subscriber) {
+    if (typeof emitter.subscribes[event] !== 'undefined') {
+        emitter.subscribes[event].push(subscriber);
+    } else {
+        emitter.subscribes[event] = [subscriber];
+    }
+}
+
 /**
  * Возвращает новый emitter
  * @returns {Object}
  */
 function getEmitter() {
     return {
+        subscribes: {},
 
         /**
          * Подписаться на событие
          * @param {String} event
          * @param {Object} context
          * @param {Function} handler
+         * @returns {Object}
          */
         on: function (event, context, handler) {
-            console.info(event, context, handler);
+            add(this, event, { student: context, handler, happened: 0, nth: 0 });
+
+            return this;
         },
 
         /**
          * Отписаться от события
          * @param {String} event
          * @param {Object} context
+         * @returns {Object}
          */
         off: function (event, context) {
-            console.info(event, context);
+            if (typeof this.subscribes[event] !== 'undefined') {
+                this.subscribes[event] =
+                    this.subscribes[event].filter(subscribe => subscribe.student !== context);
+            }
+
+            return this;
         },
 
         /**
          * Уведомить о событии
          * @param {String} event
+         * @returns {Object}
          */
         emit: function (event) {
-            console.info(event);
+            var emitter = this;
+            eventPath(event).forEach(function (subevent) {
+                if (typeof emitter.subscribes[subevent] !== 'undefined') {
+                    emitter.subscribes[subevent].forEach(function (subscriber) {
+                        handleSubscriber(subevent, subscriber, emitter);
+                    });
+                }
+            });
+
+            return this;
         },
 
         /**
@@ -48,9 +110,12 @@ function getEmitter() {
          * @param {Object} context
          * @param {Function} handler
          * @param {Number} times – сколько раз получить уведомление
+         * @returns {Object}
          */
         several: function (event, context, handler, times) {
-            console.info(event, context, handler, times);
+            add(this, event, { student: context, handler, happened: times, nth: 0 });
+
+            return this;
         },
 
         /**
@@ -60,9 +125,16 @@ function getEmitter() {
          * @param {Object} context
          * @param {Function} handler
          * @param {Number} frequency – как часто уведомлять
+         * @returns {Object}
          */
         through: function (event, context, handler, frequency) {
-            console.info(event, context, handler, frequency);
+            if (frequency <= 0) {
+                add(this, event, { student: context, handler, happened: 0, nth: 0 });
+            } else {
+                add(this, event, { student: context, handler, happened: 1, nth: frequency });
+            }
+
+            return this;
         }
     };
 }
