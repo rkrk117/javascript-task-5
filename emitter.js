@@ -38,7 +38,7 @@ function handleSubscriber(event, subscriber, emitter) {
 }
 
 function add(emitter, event, subscriber) {
-    if (typeof emitter.subscribes[event] !== 'undefined') {
+    if (emitter.subscribes.hasOwnProperty(event)) {
         emitter.subscribes[event].push(subscriber);
     } else {
         emitter.subscribes[event] = [subscriber];
@@ -46,7 +46,7 @@ function add(emitter, event, subscriber) {
 }
 
 function remove(emitter, event, context) {
-    if (typeof emitter.subscribes[event] !== 'undefined') {
+    if (emitter.subscribes.hasOwnProperty(event)) {
         emitter.subscribes[event] =
             emitter.subscribes[event].filter(subscribe => subscribe.student !== context);
     }
@@ -108,7 +108,7 @@ function getEmitter() {
         emit: function (event) {
             var emitter = this;
             eventPath(event).forEach(function (subevent) {
-                if (typeof emitter.subscribes[subevent] !== 'undefined') {
+                if (emitter.subscribes.hasOwnProperty(subevent)) {
                     emitter.subscribes[subevent].forEach(subscriber =>
                         handleSubscriber(subevent, subscriber, emitter)
                     );
