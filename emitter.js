@@ -7,57 +7,61 @@
 getEmitter.isStar = true;
 module.exports = getEmitter;
 
-function eventPath(event) {
-    let result = event.split('.').reduce(function (acc, cur) {
-        acc.push((acc.length === 0 ? '' : acc[acc.length - 1] + '.') + cur);
+function eventNamespaces(event) {
+    var prefix = '';
+    function addToPrefix(item) {
+        prefix = prefix ? prefix + '.' + item : item;
 
-        return acc;
-    }, []);
-    result.reverse();
+        return prefix;
+    }
 
-    return result;
+    return event
+        .split('.')
+        .map(addToPrefix)
+        .reverse();
 }
 
-function handleSubscriber(event, subscriber, emitter) {
+function handleSubscriber(emitter, event, subscriber) {
     if (subscriber.nth !== 0) {
-        subscriber.happened--;
-        if (subscriber.happened === 0) {
+        subscriber.timesHappened--;
+        if (subscriber.timesHappened === 0) {
             subscriber.handler.call(subscriber.student);
-            subscriber.happened = subscriber.nth;
+            subscriber.timesHappened = subscriber.nth;
         }
-    } else if (subscriber.happened !== 0) {
+    } else if (subscriber.timesHappened !== 0) {
         subscriber.handler.call(subscriber.student);
-        if (subscriber.happened === 1) {
+        if (subscriber.timesHappened === 1) {
             emitter.off(event, subscriber.student, true);
         } else {
-            subscriber.happened--;
+            subscriber.timesHappened--;
         }
     } else {
         subscriber.handler.call(subscriber.student);
     }
 }
 
-function add(emitter, event, subscriber) {
-    if (emitter.subscribes.hasOwnProperty(event)) {
-        emitter.subscribes[event].push(subscriber);
+function add(emitter, event, subscribtion) {
+    var subscriptions = emitter.subscribes;
+    if (subscriptions.hasOwnProperty(event)) {
+        subscriptions[event].push(subscribtion);
     } else {
-        emitter.subscribes[event] = [subscriber];
+        subscriptions[event] = [subscribtion];
     }
 }
 
-function remove(emitter, event, context) {
+function remove(emitter, event, student) {
     if (emitter.subscribes.hasOwnProperty(event)) {
         emitter.subscribes[event] =
-            emitter.subscribes[event].filter(subscribe => subscribe.student !== context);
+            emitter.subscribes[event].filter(subscribe => subscribe.student !== student);
     }
 }
 
-function purge(emitter, event, context) {
-    let subclassesRegExp = new RegExp('^' + event + '\\.');
+function purge(emitter, event, student) {
+    let subclassesRegExp = new RegExp('^' + event + '(\\.|$)');
     for (let events in emitter.subscribes) {
-        if (events.match(subclassesRegExp) || events === event) {
+        if (subclassesRegExp.test(events) || events === event) {
             emitter.subscribes[events] =
-                emitter.subscribes[events].filter(subscribe => subscribe.student !== context);
+                emitter.subscribes[events].filter(subscribe => subscribe.student !== student);
         }
     }
 }
@@ -68,6 +72,17 @@ function purge(emitter, event, context) {
  */
 function getEmitter() {
     return {
+
+        /**
+        * @typedef {Object} Subscription
+        *
+        * @property {Object} student - указатель на структуру, представляющую студента,
+        *      которая годится в контекст для handler
+        * @property {Number} nth - на студента срабатывает каждое nthое событие,
+        *     если 0 - то совсем каждое
+        * @property {Number} timesHappened - если nth != 0, - спользуется для подсчета
+        *    оставшихся до срабатывания событий, иначе же - остаток ограниченной по числу подписки
+        */
         subscribes: {},
 
         /**
@@ -78,7 +93,7 @@ function getEmitter() {
          * @returns {Object}
          */
         on: function (event, context, handler) {
-            add(this, event, { student: context, handler, happened: 0, nth: 0 });
+            add(this, event, { student: context, handler, timesHappened: 0, nth: 0 });
 
             return this;
         },
@@ -106,14 +121,13 @@ function getEmitter() {
          * @returns {Object}
          */
         emit: function (event) {
-            var emitter = this;
-            eventPath(event).forEach(function (subevent) {
-                if (emitter.subscribes.hasOwnProperty(subevent)) {
-                    emitter.subscribes[subevent].forEach(subscriber =>
-                        handleSubscriber(subevent, subscriber, emitter)
+            eventNamespaces(event).forEach(function (subevent) {
+                if (this.subscribes.hasOwnProperty(subevent)) {
+                    this.subscribes[subevent].forEach(subscriber =>
+                        handleSubscriber(this, subevent, subscriber)
                     );
                 }
-            });
+            }, this);
 
             return this;
         },
@@ -128,7 +142,7 @@ function getEmitter() {
          * @returns {Object}
          */
         several: function (event, context, handler, times) {
-            add(this, event, { student: context, handler, happened: times, nth: 0 });
+            add(this, event, { student: context, handler, timesHappened: times, nth: 0 });
 
             return this;
         },
@@ -144,9 +158,9 @@ function getEmitter() {
          */
         through: function (event, context, handler, frequency) {
             if (frequency <= 0) {
-                add(this, event, { student: context, handler, happened: 0, nth: 0 });
+                add(this, event, { student: context, handler, timesHappened: 0, nth: 0 });
             } else {
-                add(this, event, { student: context, handler, happened: 1, nth: frequency });
+                add(this, event, { student: context, handler, timesHappened: 1, nth: frequency });
             }
 
             return this;
