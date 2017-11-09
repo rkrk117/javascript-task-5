@@ -31,7 +31,7 @@ function handleSubscribtion(emitter, event, subscribtion) {
     } else if (subscribtion.hasOwnProperty('timesLeft')) {
         subscribtion.handler.call(subscribtion.student);
         subscribtion.timesLeft--;
-        if (subscribtion.timesLeft === 0) {
+        if (subscribtion.timesLeft <= 0) {
             remove(emitter.subscriptions, event, subscribtion.student);
         }
     } else {
