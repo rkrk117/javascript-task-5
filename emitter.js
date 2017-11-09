@@ -135,8 +135,12 @@ function getEmitter() {
          * @returns {Object}
          */
         several: function (event, context, handler, times) {
-            add(this.subscriptions, event,
-                { student: context, handler, timesLeft: times });
+            if (times <= 0) {
+                this.on(event, context, handler);
+            } else {
+                add(this.subscriptions, event,
+                    { student: context, handler, timesLeft: times });
+            }
 
             return this;
         },
